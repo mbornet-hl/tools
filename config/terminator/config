@@ -1,0 +1,23 @@
+[global_config]
+  window_state = hidden
+  handle_size = 1
+  title_transmit_bg_color = "#000000"
+[keybindings]
+[profiles]
+  [[default]]
+    use_system_font = False
+    scrollback_lines = 10000
+    scrollbar_position = hidden
+    cursor_color = "#00FF00"
+    foreground_color = "#888888"
+    show_titlebar = False
+    font = Monospace 7
+[layouts]
+  [[default]]
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+    [[[window0]]]
+      type = Window
+      parent = ""
+[plugins]

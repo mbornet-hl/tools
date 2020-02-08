@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+#	@(#)	[MB] aj_ls_by_week	Version 1.1 du 16/05/08 - 
+#
+
+hl_opts()
+{
+	for w in {0..4}
+	do
+		case $w in
+			0)	color=3c
+				;;
+
+			1)	color=2g
+				;;
+
+			2)	color=1y
+				;;
+
+			3)	color=1r
+				;;
+
+			4)	color=1m
+				;;
+
+			*)	color=n
+				;;
+		esac
+
+		HL_COL="-$color"
+		first=true
+		for d in {0..6}
+		do
+			day=$(date '+%b %2e' -d "@$(echo "$(date '+%s') 24 3600 * 7 $w * $d + * - p" | dc)")
+			if [ "$first" = "true" ]; then
+				HL_RE="$day .+"
+				first=false
+			else
+				HL_RE="$HL_RE|$day ..:.. .+"
+			fi
+		done
+		echo -n "$HL_COL" "'$HL_RE' "
+	done
+	echo " "
+}
+/bin/ls -l "$@" | eval hl -e "$(hl_opts)"
