@@ -1,0 +1,5 @@
+#
+#	@(#)	[MB] ee_param_temperature	Version 1.1 du 20/02/10 - 
+#
+
+DATABASE='temperatures'
