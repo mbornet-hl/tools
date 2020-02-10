@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+#	Get selected temperatures from the database
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] ee_plot_temp	Version 1.1 du 20/02/10 - 
+#
+
+for core_id in {0..3}
+do
+	cat <<- EOF | mysql -N -u root -p > "core_${core_id}_temp"
+		use temperatures;
+		# select temp_source, temp_value from temp where temp_source regexp("Core [0-4]");
+		select ts, temp_value from temp where temp_source like "Core $core_id";
+	EOF
+done
