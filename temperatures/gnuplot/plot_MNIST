@@ -1,0 +1,47 @@
+#!/bin/bash
+
+usage()
+{
+	echo "Usage: $0 MNIST_image" >&2
+}
+
+if [ "$1" = "" ]; then
+	usage
+	exit 1
+fi
+IMAGE="$1"
+
+gnuplot <<- EOF
+	set terminal jpeg transparent nocrop enhanced font arial 8 size 1024,768 
+	set output 'MNIST.jpg'
+	unset key
+	set view map
+	set style data linespoints
+	set xtics border in scale 0,0 mirror norotate    offset character 0, 0, 0
+	set ytics border in scale 0,0 mirror norotate    offset character 0, 0, 0
+	set ztics border in scale 0,0 nomirror norotate  offset character 0, 0, 0
+	set nocbtics
+	set title "MNIST label X" 
+	set rrange  [ * : *  ] noreverse nowriteback
+	set trange  [ * : *  ] noreverse nowriteback
+	set urange  [ * : *  ] noreverse nowriteback
+	set vrange  [ * : *  ] noreverse nowriteback
+	set xrange  [ 0 : 28 ] noreverse nowriteback
+	set x2range [ * : *  ] noreverse nowriteback
+	set yrange  [ 0 : 28 ] noreverse nowriteback
+	set y2range [ * : *  ] noreverse nowriteback
+	set zrange  [ * : *  ] noreverse nowriteback
+	#set cblabel "Score" 
+	set cblabel
+	set cbrange [ -1.00000 : 5.00000 ] noreverse nowriteback
+	# set palette rgbformulae 33, 13, -23
+	r(x) = x < 0.1 ? 0 : abs(2*((x - 0.1)/0.9) - 0.5)
+	g(x) = x < 0.1 ? 0 : sin(pi*(x - 0.1)/0.9)
+	b(x) = x < 0.1 ? 0 : 1.3 - 3*x
+	set palette model RGB functions r(gray),g(gray),b(gray)
+	set palette model RGB functions r(gray),g(gray),b(gray)
+	plot '$IMAGE' using 1:2:3 with image
+	set output 'MNIST_02.jpg'
+     set palette rgbformulae 33, 13, -23
+     plot '$IMAGE' using 1:2:3 with image flipx
+EOF

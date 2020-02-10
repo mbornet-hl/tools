@@ -1,0 +1,104 @@
+#!/bin/sh
+#
+#	Script de generation de graphes a partir de fichiers CSV
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	b_cvt	Version 1.2 du 03/07/04
+#
+
+usage()
+{
+	echo "$PRGM data_file field_number"
+}
+
+PRGM=`basename $0`
+
+if [ "$2" = "" -o "$3" != "" ]
+then
+	usage
+	exit 1
+fi
+
+data_file="$1"
+field_no=`expr "$2" + 2`
+
+DATA=DATA
+cp /dev/null $DATA
+
+PARAM=`awk 'BEGIN {
+	FS	= ",";
+	OFS	= "\t";
+	field	= '$field_no';
+	data	= "'$DATA'";
+}
+{
+	if ($(field) ~ /^[-0-9.]*$/) {
+		timestamp	= $1;
+		day		= timestamp;
+		sub(/ .*/, "", day);
+
+		D		= day;
+		sub(/[^\/]*\//, "", D);
+		sub(/\/.*/, "", D);
+
+		M		= day;
+		sub(/\/.*/, "", M);
+
+		Y		= day;
+		sub(/.*\//, "", Y);
+		Y		+= 2000;
+
+		hour		= timestamp;
+		sub(/^[^ ]*[ ]*/, "", hour);
+		sub(/ .*/, "", hour);
+
+		h		= hour;
+		sub(/:.*/, "", h);
+		
+		m		= hour;
+		sub(/.*:/, "", m);
+
+		am_pm		= timestamp;
+		sub(/.* /, "", am_pm);
+
+		if (am_pm == "PM" && h != 12) {
+			h	+= 12;
+		}
+		if (am_pm == "AM" && h == 12) {
+			h	 = 0;
+		}
+
+	#	printf("DAY = [%s] HOUR = [%s] AM_PM = [%s]\n", day, hour, am_pm);
+	#	printf("D   = [%s] M    = [%s] Y     = [%s]\n", D, M, Y);
+	#	printf("h   = [%s] m    = [%s]\n", h, m);
+
+		if ($(field) != "") {
+			printf("%02d-%02d-%04d %02d:%02d ", D, M, Y, h, m) >> data;
+			printf("%s\n", $(field))                           >> data;
+		}
+	}
+	else {
+		printf("%s\n", $(field));
+	}
+}
+END {
+#	Generation du graphe
+#	~~~~~~~~~~~~~~~~~~~~
+}' $data_file`
+color0=2
+column=3
+color=`eval echo '$'color$i`
+gnuplot <<- EOF
+	set terminal jpeg
+	set xlabel "Heure"
+	set ylabel "Y LABEL"
+	show label
+	set title "$PARAM"
+	set output "$PARAM.jpg"
+	set xdata time
+	set timefmt "%d-%m-%y %H:%M"
+	set format x "%d-%Hh"
+	set yrange [0:]
+	set data style lines
+	plot "$DATA" using 1:$column title "$PARAM" w lines $color
+EOF

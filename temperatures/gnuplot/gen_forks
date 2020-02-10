@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+#	Generation du graphe des creation de processus
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	b_gen_forks	Version 1.1 du 03/07/04
+#
+
+usage()
+{
+	echo "$PRGNAME fichier_forks"
+}
+
+PRGNAME=`basename $0`
+
+if [ "$1" = "" ]
+then
+	usage
+	exit 1
+fi
+
+DATA_FORKS="$1"
+DATA_FORKS2=data.forks
+SYST=`expr "$DATA_FORKS" : '\(.*\)\.forks$' '|' 0`
+if [ $? != 0 ]
+then
+	usage
+	exit 1
+fi
+
+awk '{
+	printf("%s %s\n", $4, $8);
+}' $DATA_FORKS > $DATA_FORKS2
+
+DAY=`pwd | sed 's:^.*/\([^/]*\)/[^/]*$:\1:'`
+echo $DAY
+
+#	Generation du graphe
+#	~~~~~~~~~~~~~~~~~~~~
+i=0
+color0=2
+while [ $i -lt 1 ]
+do
+	column=`expr $i + 2`
+	color=`eval echo '$'color$i`
+	gnuplot <<- EOF
+		set terminal jpeg
+		set xlabel "Heure"
+		set ylabel "Nombre de forks en 5s"
+		show label
+		set title "Creation des processus sur $SYST - $DAY"
+		set output "${SYST}_forks${i}.jpg"
+		set xdata time
+		set timefmt "%H:%M:%S"
+		set format x "%H:%M"
+		set yrange [0:]
+		set data style lines
+		plot "$DATA_FORKS2" using 1:$column title "forks" w lines $color
+	EOF
+	i=`expr $i + 1`
+done

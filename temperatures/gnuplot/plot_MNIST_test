@@ -1,0 +1,25 @@
+#!/bin/bash
+
+usage()
+{
+	echo "Usage: $0 MNIST_image" >&2
+}
+
+if [ "$1" = "" ]; then
+	usage
+	exit 1
+fi
+IMAGE="$1"
+
+sed '/^#/d;' <<- EOF | gnuplot
+#	reset
+	set terminal jpeg transparent nocrop enhanced font arial 8 size 1024,768 
+	set output 'MNIST_03.jpg'
+#	set autoscale fix
+#	set palette defined (0 'white', 1 'green')
+#	set tics scale 0
+#	unset cbtics
+#	set cblabel 'Score'
+#	unset key
+	plot '$IMAGE' matrix with image
+EOF

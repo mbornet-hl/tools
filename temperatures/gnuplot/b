@@ -1,0 +1,23 @@
+#!/bin/sh
+
+data=bond0.out
+outfile=g_bond0.png
+
+gnuplot <<-EOF
+	#set terminal png color small
+	set terminal png
+	#set size $arg_coeff_X,$arg_coeff_Y
+	#set xlabel "$xlabel"
+	#set ylabel "$ylabel"
+	#show label
+	#set title  "$title"
+	set output "$outfile"
+	set xdata time
+	set xtics rotate 90
+	set timefmt "%H:%M:%S"
+	#set xrange ["$x1":"$x2"]
+	#set yrange [0:100]
+	#set format x "$x_format"
+	set data style lines
+	plot "$data" using 1:4 title "network - bond0 - rxpck/s" w lines 3
+EOF

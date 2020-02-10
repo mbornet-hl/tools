@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+#	Generation d'un graphe a partir de donnees issues des donnees
+#	extraites des bases RRD
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	%Z%	[%Y%] %M%	Version %I% du %E% - %Q%
+#
+
+#	Nom du fichier de commandes gnuplot
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TMP_GNUPLOT_CMDS=/tmp/gnuplot_cmds.$$
+
+#	Test des arguments
+#	~~~~~~~~~~~~~~~~~~
+if [ "$1" = "" -o "$2" != "" ]
+then
+	echo "Usage: $0 data_file"
+	exit 1
+fi
+FILE="$1"
+
+#	Initialisation du titre
+#	~~~~~~~~~~~~~~~~~~~~~~~
+TITLE="FRSU1015 - PSO Finances - Indicateur global"
+
+#	Generation des commandes gnuplot
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cat <<-EOF > $TMP_GNUPLOT_CMDS
+#	set terminal png
+	set terminal postscript
+	set title "$FILE"
+#	set output "data.png"
+	set output "data.ps"
+	set xdata time
+	set timefmt "%s"
+	set yrange [0:1.1]
+	set title "$TITLE" font "Arial,30"
+	set format x "%d-%b"
+	set ytics ( "DOWN" 0, "UP" 1 )
+	unset key
+	plot "$FILE" using 1:2 with lines 3
+EOF
+
+#	Lancement de la generation du graphe
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+gnuplot < $TMP_GNUPLOT_CMDS
+
+#	Effacement du fichier de commandes gnuplot
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rm $TMP_GNUPLOT_CMDS

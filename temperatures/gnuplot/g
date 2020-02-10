@@ -1,0 +1,25 @@
+#!/bin/sh
+
+CPU_NUM=$1
+
+data=sar_u_$CPU_NUM.out
+outfile=g_$CPU_NUM.png
+
+gnuplot <<-EOF
+	#set terminal png color small
+	set terminal png
+	#set size $arg_coeff_X,$arg_coeff_Y
+	#set xlabel "$xlabel"
+	#set ylabel "$ylabel"
+	#show label
+	#set title  "$title"
+	set output "$outfile"
+	set xdata time
+	set xtics rotate by 90
+	set timefmt "%H:%M:%S"
+	#set xrange ["$x1":"$x2"]
+	set yrange [0:100]
+	#set format x "$x_format"
+	set data style lines
+	plot "$data" using 1:8 title "idle time" w lines 3
+EOF
