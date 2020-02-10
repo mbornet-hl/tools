@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+#	@(#)	[MB] ee_colorize_sensors_temp	Version 1.2 du 20/02/10 - 
+#
+
+sensors -A | hl -ei -3r 'crit[^=]*=[ 	]*([+0-9.°C]+)' -3y 'high[^=]*=[ 	]*([+0-9.°C]+)' -3c '^[^:]+:[ 	]*([+0-9.°C]+)'

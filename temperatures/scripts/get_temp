@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+#	Script to get sensors value and insert them into a database.
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] ee_get_temp	Version 1.4 du 20/02/10 - 
+#
+
+# DB parameters
+# ~~~~~~~~~~~~~
+db_name='temperatures'
+table_name='temp'
+
+# Get system informations
+# ~~~~~~~~~~~~~~~~~~~~~~~
+nodename=`uname -n`
+timestamp=`date '+%s'`
+
+echo "use $db_name;"
+
+# Get sensors value, parse them and generate DB insert commands
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sensors -A | awk 'BEGIN {
+	node			= "'"$nodename"'";
+	ts			= "'"$timestamp"'";
+	table		= "'"$table_name"'";
+	state		= "INIT";
+}
+/^[^:][^:]*$/ {
+	if (state == "INIT" || state == "B") {
+		# Device name
+		# ~~~~~~~~~~~
+		# printf("Device : %s\n", $0);
+		device		= $1;
+		state		= "A";
+	}
+	else {
+		printf("Error !\n");
+		exit(1);
+	}
+}
+/^[A-Za-z][A-Za-z0-9 ]*:[ 	]/ {
+	if (state == "A" || state == "B") {
+		# Sensor
+		# ~~~~~~
+		sensor		= $0;
+		sub(/:.*/, "", sensor);
+
+		temp_value	= $0;
+		sub(/^[^:]*:[ 	]*/, "", temp_value);
+		sub(/[^-+0-9.].*/, "", temp_value);
+
+		if ($0 ~ /.*high[ 	]*=/) {
+			temp_high		= $0;
+			sub(/.*high[ 	]*=[ 	]*/, "", temp_high);
+			sub(/[^-+0-9.].*/, "", temp_high);
+		}
+		else {
+			temp_high		= 0;
+		}
+
+		if ($0 ~ /.*crit[ 	]*=/) {
+			temp_crit		= $0;
+			sub(/.*crit[ 	]*=[ 	]*/, "", temp_crit);
+			sub(/[^-+0-9.].*/, "", temp_crit);
+		}
+		else {
+			temp_crit		= 0;
+		}
+
+		# printf("%-16s %-20s %-15s %4.1f %5.1f %5.1f\n", node, device, sensor, temp_value, temp_high, temp_crit);
+		printf("INSERT INTO `%s`(nodename, ts, device, temp_source, temp_value, temp_high, temp_crit) ", table);
+		printf("VALUES (\"%s\", %s, \"%s\", \"%s\", %4.1f, %5.1f, %5.1f);\n", node, ts, device, sensor, temp_value, temp_high, temp_crit);
+	}
+	state		= "B";
+}'
