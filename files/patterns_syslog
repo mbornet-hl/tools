@@ -1,0 +1,42 @@
+#
+#	Patterns file for syslog filtering
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] ed_patterns_syslog	Version 1.1 du 20/02/10 - 
+#
+#	RegExp must be adjusted to the filtering need.
+#
+#	The ' ' at the beginning of the lines are important and must be preserved !
+#
+
+# Error
+# ~~~~~
+# [Ee][Rr][Rr][Oo][Rr]
+
+# Warning
+# ~~~~~~~
+# [Ww][Aa][Rr][Nn]([Ii][Nn][Gg])?
+
+ rsyslogd:
+ getty@tty
+ containerd\[
+ anacron\[
+ dhclient\[
+ dockerd\[
+ dbus-daemon\[
+ avahi-daemon\[
+ udisksd\[
+ sh\[
+ polkitd\[
+
+ CRON\[
+ PackageKit:
+
+ systemd-timesyncd\[
+ systemd-udevd\[
+ systemd\[[0-9]*\].*\.service:.*Succeeded\.
+ systemd\[[0-9]*\].*Listening
+
+ systemd\[
+
+ kernel:

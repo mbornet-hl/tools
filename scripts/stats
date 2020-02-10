@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+#    Script for filtering logs
+#    ~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] ed_stats	Version 1.2 du 20/02/10 - 
+#
+
+# Function : display script usage
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+usage()
+{
+     echo "Usage: $0 pattern_file log_file"
+}
+
+# Check command line arguments
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if [ "$2" = "" -o "$3" != "" ]
+then
+     usage
+     exit 0
+fi
+
+# Get screen width
+# ~~~~~~~~~~~~~~~~
+USE_HL=no SZ=`stty -a | sed -n 's/.* columns \([0-9]*\);.*/\1/p'`
+
+# Size of the label
+# ~~~~~~~~~~~~~~~~~
+LABEL_SZ=22
+
+# Information size
+# ~~~~~~~~~~~~~~~~
+INFO_SZ=`expr "$SZ" - "$LABEL_SZ"`
+
+# Initialisation des variables
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pattern_file="$1"
+log_file="$2"
+
+awk 'BEGIN {
+     # Initialize variables
+     # ~~~~~~~~~~~~~~~~~~~~
+     max           = 0;
+     total         = 0;
+
+     header_line   = "";
+     header_dash   = "";
+     for (i = 0; i < '"$SZ"'; i++) {
+     	header_line = header_line "=";
+     	header_dash = header_dash "-";
+     }
+
+     # Read and store filtering regexp
+     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     while ((getline < "'"$pattern_file"'") > 0) {
+          if ($0 !~ /^$/ && $0 !~ /^#/) {
+               pattern[max]   = $0;
+               cpt[max]       = 0;
+               max++;
+          }
+     }
+
+     printf("%s\n", header_line);
+}
+{
+     # Compare current line to regexp
+     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     for (i = 0; i < max; i++) {
+          if (match($0, pattern[i])) {
+               cpt[i]++;
+               break;
+          }
+     }
+     if (i == max) {
+          # Current line matches no specified regexp
+          # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          print;
+     }
+     total++;
+}
+END {
+     remain    = total;
+     fmt       = "%-'"$INFO_SZ"'s : %10d  (%3d %%)\n";
+     printf("%s\n", header_line);
+     printf(fmt, "TOTAL", total, 100);
+     printf("%s\n", header_dash);
+     for (i = 0; i < max; i++) {
+          regexp    = sprintf("[%s]", pattern[i]);
+          printf(fmt, regexp, cpt[i], cpt[i] * 100 / total);
+          remain    -= cpt[i];
+     }
+
+     printf("%s\n", header_dash);
+     printf(fmt, "REMAINING", remain, remain * 100 / total);
+     printf("%s\n", header_line);
+}' "$log_file"
