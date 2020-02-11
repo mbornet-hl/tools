@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+#
+
+awk 'BEGIN {
+	nb_cores_per_socket	= 0;
+}
+/^cpu cores/ {
+	if (nb_cores_per_socket == 0) {
+		nb_cores_per_socket	= $0;
+		sub(/^[^:]+: /, "", nb_cores_per_socket);
+	}
+}
+/^physical id/ {
+	id	= $0;
+	sub(/^[^:]+: /, "", id);
+	if (!(id in phys_id)) {
+		nb_phys++;
+		phys_id[id]	= 1;
+	}
+}
+END {
+	printf("%d\n", nb_cores_per_socket * nb_phys);
+}' /proc/cpuinfo

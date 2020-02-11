@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+
+awk 'BEGIN {
+	nb_cores_per_socket	= 0;
+}
+/^cpu cores/ {
+	if (nb_cores_per_socket == 0) {
+		nb_cores_per_socket	= $0;
+		sub(/^[^:]+: /, "", nb_cores_per_socket);
+	}
+}
+/^physical id/ {
+	id	= $0;
+	sub(/^[^:]+: /, "", id);
+	if (!(id in phys_id)) {
+		nb_phys++;
+		phys_id[id]	= 1;
+	}
+}
+/^processor/ {
+	virtual_core_id	= $0;
+	sub(/^[^:]+: /, "", virtual_core_id);
+	if (!(virtual_core_id in virtual_core_ids)) {
+		nb_virtual_cores++;
+		virtual_core_ids[virtual_core_id]	= 1;
+	}
+}
+END {
+	if (nb_virtual_cores == (nb_cores_per_socket * nb_phys)) {
+		HT	= "off";
+	}
+	else if (nb_virtual_cores == (nb_cores_per_socket * nb_phys * 2)) {
+		HT	= "on";
+	}
+	else {
+		HT	= "UNKNOWN";
+	}
+	printf("%s\n", HT);
+}' /proc/cpuinfo
