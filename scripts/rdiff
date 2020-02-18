@@ -1,0 +1,43 @@
+#!/bin/bash
+#
+#	Difference de fichiers entre deux serveurs
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] aj_rdiff	Version 1.2 du 19/08/29 - 
+#
+
+if [ "$2" = "" -o "$3" != "" ]
+then
+	cat <<- EOF
+		Usage: $0 file server
+		  with aliases for server :
+		    a  = an
+		    ar = ar
+		    d  = de
+		    k  = kr
+		    w  = wo
+	EOF
+	exit 1
+fi
+
+file="$1"
+server="$2"
+
+case "$server" in
+	[kK])	server='kr'
+			;;
+
+	[aA])	server='an'
+			;;
+
+	[dD])	server='de'
+			;;
+
+	ar)		server='ar'
+			;;
+
+	[wW])	server='wo'
+			;;
+esac
+
+diff "$file" <(ssh "$server" cat "$PWD/$file")

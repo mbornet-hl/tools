@@ -1,0 +1,20 @@
+
+cd()
+{
+	if [ "$3" != "" ]; then
+		echo "cd (function): too many arguments !" >&2
+	else
+		if [ "$2" != "" ]; then
+			current_dir=`pwd`
+			new_dir=`echo "$current_dir" | sed "s|$1|$2|"`
+			command cd "$new_dir"
+		else
+			if [ "$1" != "" ]; then
+				command cd "$1"
+			else
+				command cd
+			fi
+		fi
+	fi
+}
+
