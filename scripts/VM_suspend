@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+#	Suspend a virtual machine
+#	~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_suspend	Version 1.1 du 14/12/02 - 
+#
+
+VM_NAME="$1"
+virsh suspend "$VM_NAME"

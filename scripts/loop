@@ -1,0 +1,12 @@
+#!/bin/bash
+
+sleep_time="$1"
+shift
+
+while :
+do
+	date
+	"$@"
+	sleep "$sleep_time"
+	echo
+done

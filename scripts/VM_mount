@@ -1,0 +1,32 @@
+#!/bin/bash
+#
+#	Mount an ISO image as a CD-ROM
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_mount	Version 1.1 du 14/07/15 - 
+#
+
+if [ "$2" = "" -o "$3" != "" ]
+then
+	echo "Usage: $0 vm_name ISO_pathname"
+	exit 1
+fi
+
+VM_NAME="$1"
+ISO="$2"
+host=$(uname -n)
+
+case "$host" in
+	krypton)	DEV='hdc'
+			;;
+
+	antares)	DEV='hda'
+			;;
+
+	*)		echo "$0: device is undefined for $host"
+			exit 1
+			;;
+esac
+
+
+virsh attach-disk "$VM_NAME" "$ISO" "$DEV" --type cdrom --mode readonly

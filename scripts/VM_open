@@ -1,0 +1,11 @@
+#!/bin/bash
+#
+#	Start a virtual machine and open a winddow on it
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	
+#
+
+VM_NAME="$1"
+virt-viewer "$VM_NAME" &
+virsh start "$VM_NAME"

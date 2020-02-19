@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+#	Start virtual machines network
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_net_start	Version 1.1 du 14/05/02 - 
+#
+
+virsh net-start default

@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+#	List virtual machines status
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_list_all	Version 1.2 du 14/12/02 - MODIFIE
+#
+
+virsh list --all | hl --virsh_list

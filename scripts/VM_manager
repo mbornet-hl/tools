@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+#	Run graphical virtual machines manager
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_manager	Version 1.1 du 14/05/02 - 
+#
+
+virt-manager

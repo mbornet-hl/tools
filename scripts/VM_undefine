@@ -1,0 +1,17 @@
+#!/bin/sh
+#
+#	Delete a virtual machine from the VM list
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_undefine	Version 1.1 du 14/05/02 - 
+#
+
+if [ "$1" = "" ]
+then
+	echo "Usage: $0 vm_name"
+	exit 1
+fi
+
+vm_name="$1"
+
+virsh --connect qemu:///system undefine "$vm_name"

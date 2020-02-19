@@ -1,0 +1,262 @@
+#!/bin/bash
+#
+#	Automatic installation of a distribution in a VM
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_install	Version 1.4 du 14/05/08 - 
+#
+
+SLEEP_TIME=2
+
+VM_DIR=/home/machine/VM
+RESP="RESPONSE_OUTPUT.$(date '+%Y-%m-%d_%Hh%Mm%Ss')"
+
+# Trace command before executing it
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+trace_cmd()
+{
+	echo "$@"
+	"$@"
+}
+
+# Get and initialize variables from the response file
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+var_init()
+{
+	response_file="$1"
+	if [ ! -f "$response_file" ]
+	then
+		echo "*** Response file \"$response_file\" does not exist !"
+		exit 1
+	fi
+
+	tmp_file="/tmp/var_init.$$"
+	rm -f "$tmp_file"
+	grep '^#[ 	]*[A-Za-z_]*=' "$response_file"  | sed 's/^#[ 	]*//' > "$tmp_file"
+	. "$tmp_file"
+	rm -f "$tmp_file"
+}
+
+# Display the value of a specified variable
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+disp_var()
+{
+	V="$1"
+
+	printf "=====> %-20s = [%s]\n" "$V" $(eval echo '$'{$V})
+}
+
+# Create a VM
+# ~~~~~~~~~~~
+create_VM()
+{
+	iso_1=`printf "$ISO_DIR/$ISO_PATTERN" 1`
+	vm_iso_image="$VM_IMAGES_DIR/$VM_NAME.img"
+
+ 	trace_cmd virt-install --connect qemu:///system --name="$VM_NAME" --ram="$VM_RAM"       \
+		--vcpus="$VM_VCPUs" --disk path=$vm_iso_image,size="$VM_SIZE" --cdrom="$iso_1"  \
+		--vnc --os-type "$VM_OS_TYPE" --accelerat &
+}
+
+send_key()
+{
+	disp_var VM_NAME
+	key="$1"
+	echo "Sending $key to $VM_NAME"
+	echo -n "$key"
+	sleep 1
+	virsh send-key "$VM_NAME" "$key"
+}
+
+keyword_to_action()
+{
+	echo "keywords_to_action : $@"
+	key="$1"
+	num="$2"
+	if [ "$num" = "" ]
+	then
+		num=1
+	fi
+
+	case "$key" in
+		[1-9]*)		sleep_time="$key"
+				echo "$(date '+%H:%M:%S') : sleeping $sleep_time seconds ..."
+				sleep $sleep_time
+				;;
+
+		'"'*)		message="$key $num"
+				echo ""
+				echo "$message"
+				sleep $SLEEP_TIME
+				;;
+
+		KEY*)		i=1
+				while [ "$i" -le "$num" ]
+				do
+					echo -n "$key"
+					sleep 1
+					virsh send-key "$VM_NAME" "$key"
+					i=`expr $i + 1`
+				done
+				sleep $SLEEP_TIME
+				;;
+
+		UMOUNT)		echo "Unmounting CD/DVD ..."
+				virsh change-media "$VM_NAME" hdc --eject
+				sleep $SLEEP_TIME
+				;;
+
+		MOUNT)		iso=`printf "$ISO_DIR/$ISO_PATTERN" $num`
+				virsh change-media "$VM_NAME" hdc "$iso" --insert
+				sleep $SLEEP_TIME
+				;;
+
+		PAUSE)		echo "$(date '+%H:%M:%S') : pause"
+				read answer < /dev/tty
+				;;
+
+		*)		echo "UNKNOWN COMMAND \"$key\" !!!"
+				;;
+	esac
+}
+
+# Send responses from response file
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+send_responses()
+{
+	echo ">>> send_responses"
+	if [ "$INTERACTIVE" = "YES" ]
+	then
+		echo ">>> Interactive"
+		while read line
+		do
+			echo "$line" >> "$RESP"
+			processed_line=$(echo "$line" | sed '/^#/d;/^[ 	]*$/d')
+			if [ "$processed_line" != "" ]
+			then
+				keyword_to_action $processed_line
+			fi
+		done
+	else
+		echo ">>> Non interactive"
+		cat "$RESPONSE_FILE" | while read line
+		do
+			processed_line=$(echo "$line" | sed '/^#/d;/^[ 	]*$/d')
+			if [ "$processed_line" != "" ]
+			then
+				keyword_to_action $processed_line
+			fi
+		done
+	fi
+	echo "End of input"
+	echo "\"End of input\"" >> "$RESP"
+}
+
+# Main function
+# ~~~~~~~~~~~~~
+main()
+{
+	# Read response file and initialize variables
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	disp_var RESPONSE_FILE
+	var_init $RESPONSE_FILE
+
+	# DEBUG : display variables
+	# ~~~~~~~~~~~~~~~~~~~~~~~~~
+	disp_var ISO_DIR
+	disp_var ISO_PATTERN
+	disp_var VM_NAME
+	disp_var VM_RAM
+	disp_var VM_VCPUs
+	disp_var VM_SIZE
+	disp_var VM_OS_TYPE
+
+	if [ "$CREATE_VM" = "YES" ]
+	then
+		# Create virtual machine
+		# ~~~~~~~~~~~~~~~~~~~~~~
+		create_VM
+		sleep 10
+	fi
+
+echo "After create VM :"
+	if [ "$SEND_RESPONSES" = "YES" ]
+	then
+		if [ "$RESPONSE_FILE" = "" ]
+		then
+			echo "*** No response file to send the responses from !"
+			exit 1
+		fi
+		send_responses
+	else
+		echo "No responses sent"
+	fi
+}
+
+# ==================== MAIN PROGRAM ====================
+
+while getopts "chr:Rt:i" opt
+do
+	case "$opt" in
+		h)	# Display script usage
+			# ~~~~~~~~~~~~~~~~~~~~
+			cat <<-EOF
+				Usage: $0 [-h][-c][-r response_file][-R][-t function_to_test [args ...]]
+				-h : display usage
+				-c : create virtual machine
+				-r : use the specified response file
+				-R : send the responses from the response file
+				-t : test of a fuction of the script
+				-i : interactively send responses to the VM
+			EOF
+			exit 1
+			;;
+
+		c)	# Create virtual machine
+			# ~~~~~~~~~~~~~~~~~~~~~~
+			CREATE_VM="YES"
+			;;
+
+		r)	# Specify a response file
+			# ~~~~~~~~~~~~~~~~~~~~~~~
+			RESPONSE_FILE="$OPTARG"
+			;;
+
+		R)	# Send the responses from the response file
+			# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			SEND_RESPONSES="YES"
+			;;
+
+		t)	# Test of a function of the script
+			# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			TEST=YES;
+			fct="$OPTARG"
+			;;
+
+
+		i)	# Interactively send responses to the VM
+			# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			INTERACTIVE="YES"
+			;;
+
+		*)	;;
+	esac
+done
+
+shift $((OPTIND-1))
+
+# Execution of the main function
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if [ "$TEST" = YES ]
+then
+	if [ "$RESPONSE_FILE" != "" ]
+	then
+		var_init $RESPONSE_FILE
+	fi
+	"$fct" "$@"
+	exit 120
+else
+	main "$@"
+fi
+
+exit 0

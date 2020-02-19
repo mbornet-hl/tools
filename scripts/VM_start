@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+#	Start a virtual machine
+#	~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_start	Version 1.1 du 14/07/15 - 
+#
+
+VM_NAME="$1"
+virsh start "$VM_NAME"

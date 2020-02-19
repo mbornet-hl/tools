@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+#	Resume a virtual machine
+#	~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] bs_VM_resume	Version 1.1 du 14/12/02 - 
+#
+
+VM_NAME="$1"
+virsh resume "$VM_NAME"
