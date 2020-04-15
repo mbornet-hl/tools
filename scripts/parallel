@@ -1,0 +1,497 @@
+#!/bin/bash
+#
+#	Parallelization script
+#	~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] aj_parallel	Version 1.4 du 20/04/15 - 
+#
+#	This script runs N processes in parallel
+#	(N may be specified as an argument).
+#	The user task is defined in the user_fct() function.
+#	The dataset for the different processes may come from
+#	a single source.
+#
+
+# Counter management
+# ~~~~~~~~~~~~~~~~~~
+init_counter()
+{
+	rm -f "$SHM_COUNTER"
+	echo "$NB_FREE" > "$SHM_COUNTER"
+}
+
+incr_counter()
+{
+	lock "$COUNTER_LOCK"
+	NB_FREE=$(cat "$SHM_COUNTER" 2> /dev/null)
+	NB_FREE=$(expr "$NB_FREE" + 1 2> /dev/null)
+	echo "$NB_FREE" > "$SHM_COUNTER"
+	unlock "$COUNTER_LOCK"
+}
+
+decr_counter()
+{
+	lock "$COUNTER_LOCK"
+	NB_FREE=$(cat "$SHM_COUNTER" 2> /dev/null)
+	NB_FREE=$(expr "$NB_FREE" - 1 2> /dev/null)
+	echo "$NB_FREE" > "$SHM_COUNTER"
+	unlock "$COUNTER_LOCK"
+}
+
+no_free_slot()
+{
+	lock "$COUNTER_LOCK"
+	NB_FREE=$(cat "$SHM_COUNTER" 2> /dev/null)
+	[ "$NB_FREE" = 0 ]
+	retcode=$?
+	unlock "$COUNTER_LOCK"
+	return $retcode
+}
+
+all_slot_free()
+{
+	lock "$COUNTER_LOCK"
+	NB_FREE=$(cat "$SHM_COUNTER" 2> /dev/null)
+	[ "$NB_FREE" = "$NB_THREADS" ]
+	retcode=$?
+	unlock "$COUNTER_LOCK"
+	return $retcode
+}
+
+# Slot number management
+# ~~~~~~~~~~~~~~~~~~~~~~
+push_slot()
+{
+	lock "$SLOTS_LOCK"
+	echo "$1" >> "$SHM_SLOTS"
+	unlock "$SLOTS_LOCK"
+}
+
+pop_slot()
+{
+	lock "$SLOTS_LOCK"
+	sed -n '1p' "$SHM_SLOTS"
+	sed -i '1d' "$SHM_SLOTS"
+	unlock "$SLOTS_LOCK"
+}
+
+init_slots()
+{
+	slot_no=1
+	while [ "$slot_no" -le "$NB_THREADS" ]
+	do
+		push_slot "$slot_no"
+		slot_no=`expr "$slot_no" + 1`
+	done
+}
+
+# Lock management
+# ~~~~~~~~~~~~~~~
+lock()
+{
+	LOCK="$1"
+
+#	Version using "lockfile" from package "procmail"
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#	lockfile -1 -r -1 "$LOCK"
+
+#	Version using "flock" from package "util-linux"
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#	The following instruction locks the file "$LOCK",
+#	launches "sleep" in the background for 20 hours,
+#	and writes its PID into the "$LOCK" file.
+#	So the lock() function can return with "$LOCK" still locked.
+	flock "$LOCK" -c 'bash -c "sleep 72000 & echo \$! > '"$LOCK"'"'
+}
+
+unlock()
+{
+	LOCK="$1"
+
+#	Version using "lockfile" from package "procmail"
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#	rm -f "$LOCK"
+
+#	Version using "flock" from package "util-linux"
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#	The following code kills the process ("sleep ...")
+#	whose PID is specified in the "$LOCK" file, which
+#	unlocks the lock file.
+	if [ -f "$LOCK" ]; then
+		kill -9 `cat "$LOCK" 2> /dev/null` 2> /dev/null
+	fi
+}
+
+# Launch management
+# ~~~~~~~~~~~~~~~~~
+cond_launch()
+{
+	while no_free_slot
+	do
+		sleep 1
+	done
+	decr_counter
+	launch "$@" &
+}
+
+launch()
+{
+	fct="$1"
+	shift
+
+	slot=`pop_slot`
+
+	"$fct" "$slot" "$@"
+	incr_counter
+	push_slot "$slot"
+}
+
+final_wait()
+{
+	while ! all_slot_free
+	do
+		sleep 2
+	done
+}
+
+init_prgm()
+{
+	init_counter
+	unlock "$COUNTER_LOCK"
+	unlock "$SLOTS_LOCK"
+}
+
+end_prgm()
+{
+	final_wait
+	unlock "$COUNTER_LOCK"
+	unlock "$SLOTS_LOCK"
+	rm -f "$SHM_COUNTER" "$SHM_SLOTS"
+}
+
+sig_prgm()
+{
+	unlock "$COUNTER_LOCK"
+	unlock "$SLOTS_LOCK"
+	rm -f "$SHM_COUNTER" "$SHM_SLOTS"
+	exit 1
+}
+
+# User function
+# ~~~~~~~~~~~~~
+user_fct()
+{
+# FOR TEST(1) PURPOSES :
+# ~~~~~~~~~~~~~~~~~~~~~~
+#	sleep 2
+	sleep `echo "3 k $RANDOM 32767.0 / p" | dc`
+	echo -n "`date '+%Y-%m-%d %H:%M:%S'` : "
+	printf "%3d %3d\n" "$@"
+
+# FOR TEST(2) PURPOSES :
+# ~~~~~~~~~~~~~~~~~~~~~~
+#	sleep 2
+#	echo -n "`date '+%Y-%m-%d %H:%M:%S'` : "
+#	printf "%3d %s\n" "$@"
+}
+
+# Main program
+# ~~~~~~~~~~~~
+if [ "$1" != '' ]; then
+	readonly NB_THREADS="$1"
+else
+	readonly NB_THREADS=17
+fi
+
+NB_FREE="$NB_THREADS"
+readonly SHM_COUNTER="/dev/shm/proc_slot_count.$$"
+readonly COUNTER_LOCK="/tmp/counter_lock.$$"
+readonly SHM_SLOTS="/dev/shm/slots.$$"
+readonly SLOTS_LOCK="/tmp/slots_lock.$$"
+
+> "$SHM_SLOTS"
+
+trap 'sig_prgm' 1 2 3 15
+
+init_prgm
+init_slots
+
+# Loop that dispatches data from the dataset to the processes
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# FOR TEST(1) PURPOSES :
+# ~~~~~~~~~~~~~~~~~~~~~~
+# The dataset is made of integers ranging from 1 to 256.
+#
+for i in {1..256}
+do
+	cond_launch user_fct $i
+done
+
+# FOR TEST(2) PURPOSES :
+# ~~~~~~~~~~~~~~~~~~~~~~
+# sed '/^#/d;/^[ 	]*$/d' <<- EOF | while read data_line
+# 	# Data set
+# 	# ~~~~~~~~
+# 	DATASET AA
+# 	DATASET AB
+# 	DATASET AC
+# 	DATASET AD
+# 	DATASET AE
+# 	DATASET AF
+# 	DATASET AG
+# 	DATASET AH
+# 	DATASET AI
+# 	DATASET AJ
+# 	DATASET AK
+# 	DATASET AL
+# 	DATASET AM
+# 	DATASET AN
+# 	DATASET AO
+# 	DATASET AP
+# 	DATASET BA
+# 	DATASET BB
+# 	DATASET BC
+# 	DATASET BD
+# 	DATASET BE
+# 	DATASET BF
+# 	DATASET BG
+# 	DATASET BH
+# 	DATASET BI
+# 	DATASET BJ
+# 	DATASET BK
+# 	DATASET BL
+# 	DATASET BM
+# 	DATASET BN
+# 	DATASET BO
+# 	DATASET BP
+# 	DATASET CA
+# 	DATASET CB
+# 	DATASET CC
+# 	DATASET CD
+# 	DATASET CE
+# 	DATASET CF
+# 	DATASET CG
+# 	DATASET CH
+# 	DATASET CI
+# 	DATASET CJ
+# 	DATASET CK
+# 	DATASET CL
+# 	DATASET CM
+# 	DATASET CN
+# 	DATASET CO
+# 	DATASET CP
+# 	DATASET DA
+# 	DATASET DB
+# 	DATASET DC
+# 	DATASET DD
+# 	DATASET DE
+# 	DATASET DF
+# 	DATASET DG
+# 	DATASET DH
+# 	DATASET DI
+# 	DATASET DJ
+# 	DATASET DK
+# 	DATASET DL
+# 	DATASET DM
+# 	DATASET DN
+# 	DATASET DO
+# 	DATASET DP
+# 	DATASET EA
+# 	DATASET EB
+# 	DATASET EC
+# 	DATASET ED
+# 	DATASET EE
+# 	DATASET EF
+# 	DATASET EG
+# 	DATASET EH
+# 	DATASET EI
+# 	DATASET EJ
+# 	DATASET EK
+# 	DATASET EL
+# 	DATASET EM
+# 	DATASET EN
+# 	DATASET EO
+# 	DATASET EP
+# 	DATASET FA
+# 	DATASET FB
+# 	DATASET FC
+# 	DATASET FD
+# 	DATASET FE
+# 	DATASET FF
+# 	DATASET FG
+# 	DATASET FH
+# 	DATASET FI
+# 	DATASET FJ
+# 	DATASET FK
+# 	DATASET FL
+# 	DATASET FM
+# 	DATASET FN
+# 	DATASET FO
+# 	DATASET FP
+# 	DATASET GA
+# 	DATASET GB
+# 	DATASET GC
+# 	DATASET GD
+# 	DATASET GE
+# 	DATASET GF
+# 	DATASET GG
+# 	DATASET GH
+# 	DATASET GI
+# 	DATASET GJ
+# 	DATASET GK
+# 	DATASET GL
+# 	DATASET GM
+# 	DATASET GN
+# 	DATASET GO
+# 	DATASET GP
+# 	DATASET HA
+# 	DATASET HB
+# 	DATASET HC
+# 	DATASET HD
+# 	DATASET HE
+# 	DATASET HF
+# 	DATASET HG
+# 	DATASET HH
+# 	DATASET HI
+# 	DATASET HJ
+# 	DATASET HK
+# 	DATASET HL
+# 	DATASET HM
+# 	DATASET HN
+# 	DATASET HO
+# 	DATASET HP
+# 	DATASET IA
+# 	DATASET IB
+# 	DATASET IC
+# 	DATASET ID
+# 	DATASET IE
+# 	DATASET IF
+# 	DATASET IG
+# 	DATASET IH
+# 	DATASET II
+# 	DATASET IJ
+# 	DATASET IK
+# 	DATASET IL
+# 	DATASET IM
+# 	DATASET IN
+# 	DATASET IO
+# 	DATASET IP
+# 	DATASET JA
+# 	DATASET JB
+# 	DATASET JC
+# 	DATASET JD
+# 	DATASET JE
+# 	DATASET JF
+# 	DATASET JG
+# 	DATASET JH
+# 	DATASET JI
+# 	DATASET JJ
+# 	DATASET JK
+# 	DATASET JL
+# 	DATASET JM
+# 	DATASET JN
+# 	DATASET JO
+# 	DATASET JP
+# 	DATASET KA
+# 	DATASET KB
+# 	DATASET KC
+# 	DATASET KD
+# 	DATASET KE
+# 	DATASET KF
+# 	DATASET KG
+# 	DATASET KH
+# 	DATASET KI
+# 	DATASET KJ
+# 	DATASET KK
+# 	DATASET KL
+# 	DATASET KM
+# 	DATASET KN
+# 	DATASET KO
+# 	DATASET KP
+# 	DATASET LA
+# 	DATASET LB
+# 	DATASET LC
+# 	DATASET LD
+# 	DATASET LE
+# 	DATASET LF
+# 	DATASET LG
+# 	DATASET LH
+# 	DATASET LI
+# 	DATASET LJ
+# 	DATASET LK
+# 	DATASET LL
+# 	DATASET LM
+# 	DATASET LN
+# 	DATASET LO
+# 	DATASET LP
+# 	DATASET MA
+# 	DATASET MB
+# 	DATASET MC
+# 	DATASET MD
+# 	DATASET ME
+# 	DATASET MF
+# 	DATASET MG
+# 	DATASET MH
+# 	DATASET MI
+# 	DATASET MJ
+# 	DATASET MK
+# 	DATASET ML
+# 	DATASET MM
+# 	DATASET MN
+# 	DATASET MO
+# 	DATASET MP
+# 	DATASET NA
+# 	DATASET NB
+# 	DATASET NC
+# 	DATASET ND
+# 	DATASET NE
+# 	DATASET NF
+# 	DATASET NG
+# 	DATASET NH
+# 	DATASET NI
+# 	DATASET NJ
+# 	DATASET NK
+# 	DATASET NL
+# 	DATASET NM
+# 	DATASET NN
+# 	DATASET NO
+# 	DATASET NP
+# 	DATASET OA
+# 	DATASET OB
+# 	DATASET OC
+# 	DATASET OD
+# 	DATASET OE
+# 	DATASET OF
+# 	DATASET OG
+# 	DATASET OH
+# 	DATASET OI
+# 	DATASET OJ
+# 	DATASET OK
+# 	DATASET OL
+# 	DATASET OM
+# 	DATASET ON
+# 	DATASET OO
+# 	DATASET OP
+# 	DATASET PA
+# 	DATASET PB
+# 	DATASET PC
+# 	DATASET PD
+# 	DATASET PE
+# 	DATASET PF
+# 	DATASET PG
+# 	DATASET PH
+# 	DATASET PI
+# 	DATASET PJ
+# 	DATASET PK
+# 	DATASET PL
+# 	DATASET PM
+# 	DATASET PN
+# 	DATASET PO
+# 	DATASET PP
+# EOF
+# do
+# 	cond_launch user_fct "$NB_FREE" "$data_line"
+# done
+
+end_prgm
