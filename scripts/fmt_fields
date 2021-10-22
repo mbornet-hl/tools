@@ -1,0 +1,71 @@
+#!/bin/bash
+#
+#	Reformat input with identical width columns
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+#	@(#)	[MB] aj_fmt_fields	Version 1.2 du 21/10/22 - 
+#
+
+readonly INPUT_SEP='[	][ 	]*'
+readonly OUTPUT_SEP=" | "
+
+usage()
+{
+	cat <<- EOF >&2
+		Usage: $PROGNAME [-o output_field_separator] [-i input_field_separator] [filename ...]
+		     Default input  separator  : '$INPUT_SEP'
+		     Default output separator  : '$OUTPUT_SEP'
+	EOF
+}
+
+# MAIN PROGRAM
+# ~~~~~~~~~~~~
+PROGNAME=`basename "$0"`
+
+input_sep="$INPUT_SEP"
+output_sep="$OUTPUT_SEP"
+
+while getopts 'hi:o:' opt
+do
+	case "$opt" in
+		i)		input_sep="$OPTARG"
+				;;
+
+		o)		output_sep="$OPTARG"
+				;;
+
+		h|*)		usage
+				exit 1
+				;;
+	esac
+done
+shift $((OPTIND-1))
+
+if [ "$1" = "" ]; then
+	usage
+	exit 1
+fi
+
+
+awk -F "$input_sep" 'BEGIN {
+	lineno		= O;
+	output_sep	= "'"$output_sep"'";
+}
+{
+	line[lineno++]	= $0;
+
+	for (i = 1; i <= NF; i++) {
+		if (max[i] < length($i)) {
+			max[i] = length($i);
+		}
+	}
+}
+END {
+	for (k = 0; k < lineno; k++) {
+		$0 = line[k];
+		for (i = 1; i <= NF; i++) {
+			printf("%s%-*s", i == 1 ? "" : output_sep, max[i], $i);
+		}
+		printf("\n");
+	}
+}' "$@"
