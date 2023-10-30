@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+#	Who with idle time
+#	~~~~~~~~~~~~~~~~~~
+#
+#	Author      : Martial Bornet
+#	Last update : 2022-08-10
+#
+
+TMP_WHO="/tmp/who.out.$$"
+TMP_PS="/tmp/who_ps_out.$$"
+DIM_USER="$USER"
+WHO=$(type -p who)
+
+"$WHO" | sort -k2,2 > "$TMP_WHO"
+"$WHO" | awk '{ printf("/dev/%s\n", $2); }'  | xargs ls -l --time-style '+%Y-%m-%d %H:%M'| \
+	awk '{ sub(/\/dev\//, ""); printf("%s %s %s\n", $(NF), $(NF - 2), $(NF - 1)); }' | sort -k1,1 > "$TMP_PS"
+join -1 2 -2 1 -o '1.1 1.2 1.3 1.4 2.2 2.3 2.4' "$TMP_WHO" "$TMP_PS" | sort -k7,7 | \
+	fo '^([^ ]+) +(pts/[0-9]+) +([^ ]+) +([^ ]+) +([^ ]+) +([^ ]+)' -20,-7,10,5,10,5 | sort -k5,5 -k6,6 | \
+	hl -ei -1b "\<$DIM_USER\>" -3c '^[^ ]+'

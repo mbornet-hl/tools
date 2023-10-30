@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+#	Display help messages for administration scripts
+#	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#	(generic version of the script)
+#
+#	@(#)	[MB] fe_adm_help_gen	Version 1.1 du 23/10/30 - 
+#
+#	Author      : Martial Bornet
+#	Last update : 2023-10-30
+#
+
+sed_filter()
+{
+	sed '/^[ 	]*#.*/d'
+}
+
+(
+	sed_filter <<- EOF
+		  # Comment
+		  #
+		  List of admin scripts
+		  ~~~~~~~~~~~~~~~~~~~~~
+
+		  * Check consistency between the local and a remote server
+		       - rdiff                      : list differences between a file on local server and the same file on the specified remote server
+
+		  * Check consistency between two directory trees
+		       - diff_tree                  : list differences between two directory trees and show more recent files
+
+		  * Synchronize specified directory with remote server
+		       - R                          : synchronize directory with remote server (specified with an alias)
+
+	EOF
+
+	for script in $(/bin/ls \
+		$HOME/bin/phys_cores	 		\
+		$HOME/bin/hyperthreading		\
+		$HOME/bin/cpu_sockets			\
+	)
+	do
+		comment=$(sed '/^#!/d;/^#[ 	]*$/d;s/^#[ 	]*//' "$script"  | head -n 1)
+		short_comment=$(echo "$comment" | sed 's/[^ ][^ ]* the specified servers//')
+		basename=$(basename "$script")
+		printf "  * %s\n" "$short_comment"
+		printf "     - %-28s : %s\n\n" "$basename" "$comment"
+	done
+) | hl --adm_help | less -RX
