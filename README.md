@@ -9,7 +9,7 @@ Miscellaneous tools : scripts, configurations, ...
 - Text data formatting
 - TTY "output" command
 
-The "output" program display lines like the following ones :
+The "output" program displays lines like the following ones :
 
 ```
 Line          1: !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !"#$%&'()*+,-./0123456
