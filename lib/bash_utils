@@ -18,13 +18,11 @@
 # 
 #    Description  :     Utilities for bash scripts
 # 
-#	@(#)	[MB] aj_bash_utils	Version 1.2 du 25/06/21 - 
+#	@(#)	[MB] aj_bash_utils	Version 1.3 du 25/06/21 - 
 # 
 #  Sources from the original file are available on :
 #  https://github.com/mbornet-hl/tools/lib
 # 
-#	@(#)	[MB] aj_bash_utils	Version 1.2 du 25/06/21 - 
-#
 
 # Function disp_vars() {{{
 disp_vars()
