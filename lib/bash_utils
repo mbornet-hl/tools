@@ -1,0 +1,182 @@
+#!/bin/bash
+#
+#  ============================================================================
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+# 
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+# 
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+#    Author       :     Martial BORNET (MB) - 21st of June, 2025
+# 
+#    Description  :     Utilities for bash scripts
+# 
+#	@(#)	[MB] aj_bash_utils	Version 1.2 du 25/06/21 - 
+# 
+#  Sources from the original file are available on :
+#  https://github.com/mbornet-hl/tools/lib
+# 
+#	@(#)	[MB] aj_bash_utils	Version 1.2 du 25/06/21 - 
+#
+
+# Function disp_vars() {{{
+disp_vars()
+{
+	for varname in "$@"
+	do
+		if [ -z $(eval echo "\${${varname}+x}") ]; then
+			printf "[VARS] %-20s is unset\n" "$varname"
+		else
+			printf "[VARS] %-20s = [%s]\n" "$varname" "$(eval echo '$'"$varname")"
+		fi
+	done
+}
+
+# }}}
+# Function disp_array() {{{
+disp_array()
+{
+	if [ "${1:-}" = '' -o "${2:-}" != '' ]; then
+		echo "Usage: $PROGNAME array_name" >&2
+		exit 1
+	fi
+
+	array_name="$1"
+	declare -n _A="$array_name"
+
+	echo "Display array $array_name :"
+
+	for key in "${!_A[@]}"
+	do
+		echo "$array_name[${key}]=${_A[$key]}"
+	done
+	echo
+}
+
+# }}}
+# Function disp_hash() {{{
+disp_hash()
+{
+	if [ "${1:-}" = '' -o "${2:-}" != '' ]; then
+		echo "Usage: disp_hash hash_name" >&2
+		exit 1
+	fi
+
+	hashname="$1"
+	declare -n _H="$hashname"
+
+	echo "Display hashname $hashname:"
+
+	for key in "${!_H[@]}"
+	do
+		echo "$hashname[${key}]=${_H[$key]}"
+	done | sort
+	echo
+}
+
+# }}}
+# Function disp_hash_value() {{{
+disp_hash_value()
+{
+	hash_name="$1"
+	key="$2"
+	
+	declare -n _h="${hash_name}"
+
+	if [[ -v _h[$key] ]]; then
+		printf "%-30s = \"%s\"\n" "${hash_name}[${key}]" "${_h[$key]:-}"
+	else
+		printf "%-30s : key \"%s\" is unset" "${hash_name}[${key}]" "$key"
+	fi
+}
+
+# }}}
+# Function lineno() {{{
+lineno()
+{
+	printf "%s::%s() line %d\n" \
+		"${BASH_SOURCE[1]}" "${FUNCNAME[1]}" \
+		"${BASH_LINENO[0]}"
+}
+
+# }}}
+# Function stack() {{{
+stack()
+{
+	cpt=0
+	for key in ${!FUNCNAME[@]}
+	do
+		if [ "$key" -gt 0 ]; then
+			printf "[%2d] %s::%s() line %d\n"		\
+				"$cpt"						\
+				"${BASH_SOURCE[$key]}" "${FUNCNAME[key]}"	\
+				"${BASH_LINENO[(($key-1))]}"
+
+			cpt=$((cpt + 1))
+		fi
+	done
+	echo
+}
+
+# }}}
+# Function fct_begin() {{{
+fct_begin()
+{
+	echo "===> ${_indent}${BASH_SOURCE[1]}::${FUNCNAME[1]}() : "
+#	echo -n "===> ${_indent}${BASH_SOURCE[1]}::${FUNCNAME[1]}() : "
+#	for arg in "$@"
+#	do
+#		echo -n "${arg} " | sed 's/^/"/;s/ $/" /'
+#	done
+	_indent="${_indent}  "
+}
+
+# }}}
+# Function fct_end() {{{
+fct_end()
+{
+	_indent="$(echo "${_indent}" | sed 's/  $//')"
+	echo "<=== ${_indent}$BASH_SOURCE[1]}::${FUNCNAME[1]}()"
+}
+
+# }}}
+# Function filter_hash_keys() {{{
+filter_hash_keys()
+{
+	hash_name="$1"
+	regex="$2"
+
+	declare -n _fh="$hash_name"
+
+	echo ${!_fh[@]} | tr ' ' '\012' | grep -E "$regex" | sort
+}
+
+# }}}
+# Function disp_sources() {{{
+disp_sources()
+{
+	disp_hash BASH_SOURCE
+}
+
+# }}}
+# Function disp_functs() {{{
+disp_functs()
+{
+	disp_hash FUNCNAME
+}
+
+# }}}
+# Function disp_sources() {{{
+disp_sources()
+{
+	disp_hash BASH_LINENO
+}
+
+# }}}
