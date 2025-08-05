@@ -18,7 +18,7 @@
 # 
 #    Description  :     Utilities for bash scripts
 # 
-#	@(#)	[MB] aj_bash_utils	Version 1.3 du 25/06/21 - 
+#	@(#)	[MB] aj_bash_utils	Version 1.4 du 25/08/05 - 
 # 
 #  Sources from the original file are available on :
 #  https://github.com/mbornet-hl/tools/lib
@@ -171,8 +171,8 @@ disp_functs()
 }
 
 # }}}
-# Function disp_sources() {{{
-disp_sources()
+# Function disp_lineno() {{{
+disp_lineno()
 {
 	disp_hash BASH_LINENO
 }
