@@ -18,12 +18,34 @@
 # 
 #    Description  :     Utilities for bash scripts
 # 
-#	@(#)	[MB] aj_bash_utils	Version 1.4 du 25/08/05 - 
+#	@(#)	[MB] aj_bash_utils	Version 1.5 du 26/01/09 - 
 # 
 #  Sources from the original file are available on :
 #  https://github.com/mbornet-hl/tools/lib
 # 
 
+# Function sed_filter() {{{
+sed_filter()
+{
+	sed '/^[ 	]*$/d;/^[ 	]*#/d'
+}
+
+# }}}
+# Function xeq() {{{
+xeq()
+{
+	if [ "$XEQ" = 'no' ]; then
+		echo -n '# '
+	fi
+
+	echo "$@"
+
+	if [ "$XEQ" != 'no' ]; then
+		"$@"
+	fi
+}
+
+# }}}
 # Function disp_vars() {{{
 disp_vars()
 {
